@@ -1,3 +1,4 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import fetch from 'node-fetch';
@@ -51,7 +52,6 @@ async function tool(sid, name, args) {
   return json?.result?.content?.[0]?.text || '';
 }
 
-// Clean tafsir response
 function cleanTafsir(raw) {
   try {
     const p = JSON.parse(raw);
@@ -61,17 +61,13 @@ function cleanTafsir(raw) {
     const entries = results[edition];
     if (!Array.isArray(entries)) return stripHtml(raw);
     return entries.map(e => stripHtml(e.text || '')).join('\n\n').slice(0, 800);
-  } catch {
-    return stripHtml(raw).slice(0, 800);
-  }
+  } catch { return stripHtml(raw).slice(0, 800); }
 }
 
-// Parse search results into structured array
 function parseSearch(raw) {
   try {
     const p = JSON.parse(raw);
-    const results = p?.results || [];
-    return results.map(r => ({
+    return (p?.results || []).map(r => ({
       verseKey: r.ayah_key,
       surah: r.surah,
       ayah: r.ayah,
@@ -79,16 +75,14 @@ function parseSearch(raw) {
       translation: r.translations?.[0]?.text || '',
       edition: r.translations?.[0]?.edition?.author || ''
     }));
-  } catch {
-    return [];
-  }
+  } catch { return []; }
 }
 
 function stripHtml(html) {
-  return html.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+  return (html || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 }
 
-// ── ROUTES ──
+// ── MCP ROUTES ──
 
 app.post('/api/search', async (req, res) => {
   const { query } = req.body;
@@ -96,8 +90,7 @@ app.post('/api/search', async (req, res) => {
   try {
     const sid = await getSession();
     const raw = await tool(sid, 'search_quran', { query, translations: 'en-abdel-haleem' });
-    const results = parseSearch(raw);
-    res.json({ results, query });
+    res.json({ results: parseSearch(raw), query });
   } catch (err) {
     console.error('search:', err.message);
     res.status(502).json({ error: err.message });
@@ -124,6 +117,18 @@ app.post('/api/translation', async (req, res) => {
     const sid = await getSession();
     const raw = await tool(sid, 'fetch_translation', { ayahs: verseKey, editions: 'en-abdel-haleem' });
     res.json({ text: cleanTafsir(raw) });
+  } catch (err) {
+    res.status(502).json({ error: err.message });
+  }
+});
+
+app.post('/api/verse', async (req, res) => {
+  const { verseKey } = req.body;
+  if (!verseKey) return res.status(400).json({ error: 'No verseKey' });
+  try {
+    const sid = await getSession();
+    const raw = await tool(sid, 'fetch_quran', { ayahs: verseKey, editions: 'ar-simple-clean' });
+    res.json({ text: raw });
   } catch (err) {
     res.status(502).json({ error: err.message });
   }
@@ -157,4 +162,70 @@ app.get('/api/tools', async (req, res) => {
   }
 });
 
-app.listen(3001, () => console.log('🕌 Afaq MCP proxy at http://localhost:3001'));
+// ── AI ANALYSIS via GROQ (FREE) ──
+
+app.post('/api/analyse', async (req, res) => {
+  const { arabic, translation, verseKey } = req.body;
+  if (!arabic) return res.status(400).json({ error: 'No ayah data' });
+
+  const GROQ_KEY = process.env.GROQ_API_KEY;
+  if (!GROQ_KEY) return res.status(500).json({ error: 'GROQ_API_KEY not set in server/.env' });
+
+  const prompt = `You are an Islamic scholar and scientific researcher. Analyze this Quranic ayah for its scientific dimensions BEYOND classical tafsir.
+
+Ayah: ${verseKey}
+Arabic: ${arabic}
+Translation: ${translation}
+
+Use EXACTLY these headers:
+
+1. SURFACE MEANING
+What this ayah says at face value in 2-3 sentences.
+
+2. SCIENTIFIC DISCOVERY
+What modern science has discovered that aligns with this ayah. Be specific: the scientific field, the exact discovery, when it was confirmed, and how the Arabic words connect to it. Give real examples with dates.
+
+3. THE GAP
+Calculate exactly how many years between this revelation (622 CE) and the scientific discovery. What did humanity not know during this entire gap?
+
+4. WHAT SCIENCE IS STILL DISCOVERING
+What scientific frontiers are still exploring themes in this ayah right now in 2026?
+
+5. PRACTICAL IMPLICATION
+What should a Muslim actually DO with this knowledge today? Specific, actionable guidance for daily life based on both the Quran and the science.
+
+6. BEYOND TAFSIR
+What would Ibn Kathir or Al-Tabari say if they were alive today with access to modern science? What insight does this ayah carry that no classical scholar could have known?
+
+Be specific. Cite real discoveries, Nobel prizes, researchers where possible. Be honest: clearly distinguish confirmed science from emerging research from speculation.`;
+
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${GROQ_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 1500,
+        temperature: 0.7,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await groqRes.json();
+    if (data.error) throw new Error(data.error.message);
+    const text = data.choices?.[0]?.message?.content || '';
+    console.log('✅ Groq analysis complete for', verseKey);
+    res.json({ text });
+  } catch (err) {
+    console.error('analyse:', err.message);
+    res.status(502).json({ error: err.message });
+  }
+});
+
+app.listen(3001, () => {
+  console.log('🕌 Afaq proxy at http://localhost:3001');
+  console.log('🤖 Groq key:', process.env.GROQ_API_KEY ? '✅ loaded' : '❌ missing — add to server/.env');
+});
