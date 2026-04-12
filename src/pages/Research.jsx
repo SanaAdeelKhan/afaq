@@ -102,6 +102,9 @@ export default function Research() {
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setSections(parseAnalysis(data.text));
+      const prevR = JSON.parse(localStorage.getItem("afaq_researched") || "[]");
+      const newEntry = { key: ayahData.key, translation: ayahData.translation, date: new Date().toISOString() };
+      localStorage.setItem("afaq_researched", JSON.stringify([...prevR.filter(r => (r.key||r) !== ayahData.key), newEntry]));
       setOpenIdx(1);
       // seed chatbot with context
       setMessages([{

@@ -159,6 +159,8 @@ export default function Search() {
     const sq = (q || query).trim();
     if (!sq) return;
     setLoading(true); setError(null); setResults(null); setSearched(sq);
+    const prev = JSON.parse(localStorage.getItem("afaq_searched") || "[]");
+    localStorage.setItem("afaq_searched", JSON.stringify([...prev.slice(-49), sq]));
     try {
       const res = await fetch(`${PROXY}/api/search`, {
         method:'POST', headers:{'Content-Type':'application/json'},
@@ -261,3 +263,4 @@ export default function Search() {
     </div>
   );
 }
+// tracking already handled inline
