@@ -229,3 +229,33 @@ app.listen(3001, () => {
   console.log('🕌 Afaq proxy at http://localhost:3001');
   console.log('🤖 Groq key:', process.env.GROQ_API_KEY ? '✅ loaded' : '❌ missing — add to server/.env');
 });
+
+app.post('/api/chat', async (req, res) => {
+  const { system, messages } = req.body;
+  if (!messages) return res.status(400).json({ error: 'No messages' });
+
+  const GROQ_KEY = process.env.GROQ_API_KEY;
+  if (!GROQ_KEY) return res.status(500).json({ error: 'GROQ_API_KEY not set' });
+
+  try {
+    const groqRes = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${GROQ_KEY}` },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        max_tokens: 600,
+        temperature: 0.7,
+        messages: [
+          { role: 'system', content: system },
+          ...messages
+        ]
+      })
+    });
+    const data = await groqRes.json();
+    if (data.error) throw new Error(data.error.message);
+    res.json({ text: data.choices?.[0]?.message?.content || '' });
+  } catch (err) {
+    console.error('chat:', err.message);
+    res.status(502).json({ error: err.message });
+  }
+});

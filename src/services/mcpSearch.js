@@ -1,26 +1,47 @@
-const SEARCH_URL = "https://api.quran.com/api/v4/search";
-const VERSE_URL  = "https://api.quran.com/api/v4/verses/by_key";
+const PROXY = 'http://localhost:3001';
 
-export async function semanticSearch(query) {
-  const url = `${SEARCH_URL}?q=${encodeURIComponent(query)}&size=6&language=en`;
-  const res  = await fetch(url);
-  if (!res.ok) throw new Error("Search failed");
+export async function mcpSearch(query) {
+  const res = await fetch(`${PROXY}/api/search`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ query })
+  });
+  if (!res.ok) throw new Error('Search failed');
   const data = await res.json();
-
-  const results = data?.search?.results || [];
-  if (!results.length) return null;
-
-  return results.map(r => ({
-    verseKey:    r.verse_key,
-    arabic:      r.text,
-    translation: r.translations?.[0]?.text?.replace(/<[^>]+>/g, "") || "",
-    surahName:   r.verse_key?.split(":")?.[0],
-  }));
+  if (data.error) throw new Error(data.error);
+  return data;
 }
 
-export async function fetchVerseDetail(verseKey) {
-  const url = `${VERSE_URL}/${verseKey}?translations=131&fields=text_uthmani`;
-  const res  = await fetch(url);
-  if (!res.ok) throw new Error("Verse fetch failed");
-  return res.json();
+export async function mcpTafsir(verseKey, edition = 'en-ibn-kathir') {
+  const res = await fetch(`${PROXY}/api/tafsir`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ verseKey, edition })
+  });
+  if (!res.ok) throw new Error('Tafsir failed');
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data.text || '';
+}
+
+export async function mcpTranslation(verseKey) {
+  const res = await fetch(`${PROXY}/api/translation`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ verseKey })
+  });
+  if (!res.ok) throw new Error('Translation failed');
+  const data = await res.json();
+  return data.text || '';
+}
+
+export async function mcpMorphology(verseKey) {
+  const res = await fetch(`${PROXY}/api/morphology`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ verseKey })
+  });
+  if (!res.ok) throw new Error('Morphology failed');
+  const data = await res.json();
+  return data.text || '';
 }
