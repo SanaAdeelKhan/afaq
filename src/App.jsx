@@ -6,6 +6,7 @@ import Tracking from "./pages/Tracking";
 import QuranMap from "./pages/QuranMap";
 import Callback from "./pages/Callback";
 import NavBar from "./components/NavBar";
+import GlobalChat from "./components/GlobalChat";
 import "./styles/main.css";
 
 export default function App() {
@@ -22,6 +23,7 @@ export default function App() {
           <Route path="/callback" element={<Callback />}  />
         </Routes>
       </div>
+      <GlobalChat />
     </BrowserRouter>
   );
 }

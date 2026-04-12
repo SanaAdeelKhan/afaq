@@ -118,76 +118,85 @@ const SURAHS = [
   {n:114,name:"An-Nas",       arabic:"الناس",      ayaat:6},
 ];
 
-// Ayaat that exist in our horizons database
 const HORIZON_AYAAT = {
   "51:47":"confirmed","23:12":"confirmed","57:25":"confirmed",
   "24:40":"confirmed","21:30":"confirmed","55:19":"confirmed",
   "16:69":"confirmed","21:32":"confirmed","36:38":"confirmed",
   "86:11":"confirmed","27:18":"confirmed","75:4":"confirmed",
-  "41:11":"approaching","21:104":"approaching","36:36":"approaching",
-  "24:43":"approaching","15:22":"approaching","4:56":"approaching",
+  "51:47":"approaching","21:104":"approaching","36:36":"approaching",
+  "41:11":"approaching","24:43":"approaching","15:22":"approaching",
+  "4:56":"approaching","96:1":"approaching",
   "17:85":"waiting","22:47":"waiting","55:33":"waiting",
   "65:12":"waiting","56:75":"waiting","39:68":"waiting",
 };
 
 export default function QuranMap() {
   const navigate = useNavigate();
-  const [explored, setExplored]   = useState({});
-  const [hovered, setHovered]     = useState(null);
+  const [exploredVerses, setExploredVerses] = useState(new Set());
+  const [selected, setSelected]   = useState(null);
   const [filter, setFilter]       = useState('all');
-  const [tooltip, setTooltip]     = useState(null);
+  const [hovered, setHovered]     = useState(null);
 
   useEffect(() => {
-    // Load explored surahs from localStorage
+    const allExplored = new Set();
     const notes      = JSON.parse(localStorage.getItem('afaq_notes') || '{}');
     const bookmarks  = JSON.parse(localStorage.getItem('afaq_bookmarks') || '[]');
     const researched = JSON.parse(localStorage.getItem('afaq_researched') || '[]');
-    const searched   = JSON.parse(localStorage.getItem('afaq_searched') || '[]');
 
-    const exploredMap = {};
-
-    // Mark surahs from notes
-    Object.keys(notes).forEach(key => {
-      const surah = parseInt(key.split(':')[0]);
-      if (surah) exploredMap[surah] = (exploredMap[surah] || 0) + 1;
+    Object.keys(notes).forEach(k => allExplored.add(k));
+    bookmarks.forEach(k => allExplored.add(k));
+    researched.forEach(item => allExplored.add(item.key || item));
+    Object.keys(HORIZON_AYAAT).forEach(k => {
+      // Mark horizon ayaat as "available to explore"
     });
 
-    // Mark surahs from bookmarks
-    bookmarks.forEach(key => {
-      const surah = parseInt(key.split(':')[0]);
-      if (surah) exploredMap[surah] = (exploredMap[surah] || 0) + 1;
-    });
-
-    // Mark surahs from researched
-    researched.forEach(item => {
-      const key = item.key || item;
-      const surah = parseInt(key.split(':')[0]);
-      if (surah) exploredMap[surah] = (exploredMap[surah] || 0) + 1;
-    });
-
-    setExplored(exploredMap);
+    setExploredVerses(allExplored);
   }, []);
 
   function getSurahStatus(surah) {
-    // Check if any ayah in this surah is in our horizons
-    const hasHorizon = Object.keys(HORIZON_AYAAT).some(
-      key => parseInt(key.split(':')[0]) === surah.n
-    );
-    const isExplored = !!explored[surah.n];
-    return { hasHorizon, isExplored };
+    const surahVerses = [...exploredVerses].filter(k => parseInt(k.split(':')[0]) === surah.n);
+    const horizonVerses = Object.keys(HORIZON_AYAAT).filter(k => parseInt(k.split(':')[0]) === surah.n);
+    const exploredCount = surahVerses.length;
+    const isFullyExplored = exploredCount >= surah.ayaat;
+    const isPartial = exploredCount > 0 && !isFullyExplored;
+    const hasHorizon = horizonVerses.length > 0;
+
+    return { exploredCount, isFullyExplored, isPartial, hasHorizon, surahVerses, horizonVerses };
   }
 
-  function handleClick(surah) {
-    navigate(`/search?q=surah+${surah.n}+${surah.name}`);
+  // Get status color
+  function getColors(status) {
+    if (status.isFullyExplored) return {
+      circle: 'var(--c)', circleBg: 'var(--c)', circleText: '#000',
+      card: 'rgba(0,255,178,0.08)', cardBorder: 'rgba(0,255,178,0.3)',
+      text: 'var(--c)', glow: '0 0 12px rgba(0,255,178,0.4)'
+    };
+    if (status.isPartial) return {
+      circle: '#F59E0B', circleBg: 'rgba(245,158,11,0.15)', circleText: '#F59E0B',
+      card: 'rgba(245,158,11,0.06)', cardBorder: 'rgba(245,158,11,0.25)',
+      text: '#F59E0B', glow: '0 0 10px rgba(245,158,11,0.3)'
+    };
+    if (status.hasHorizon) return {
+      circle: 'var(--c3)', circleBg: 'rgba(129,140,248,0.12)', circleText: 'var(--c3)',
+      card: 'rgba(129,140,248,0.04)', cardBorder: 'rgba(129,140,248,0.2)',
+      text: 'var(--c3)', glow: '0 0 8px rgba(129,140,248,0.25)'
+    };
+    return {
+      circle: 'var(--t3)', circleBg: 'var(--bg2)', circleText: 'var(--t3)',
+      card: 'var(--card)', cardBorder: 'var(--b)',
+      text: 'var(--t3)', glow: 'none'
+    };
   }
 
-  const exploredCount = Object.keys(explored).length;
   const horizonSurahs = [...new Set(Object.keys(HORIZON_AYAAT).map(k => parseInt(k.split(':')[0])))];
+  const fullySurahs   = SURAHS.filter(s => getSurahStatus(s).isFullyExplored).length;
+  const partialSurahs = SURAHS.filter(s => getSurahStatus(s).isPartial).length;
 
   const filtered = filter === 'all'      ? SURAHS
-                 : filter === 'explored' ? SURAHS.filter(s => explored[s.n])
-                 : filter === 'horizon'  ? SURAHS.filter(s => horizonSurahs.includes(s.n))
-                 : SURAHS.filter(s => !explored[s.n]);
+                 : filter === 'complete'  ? SURAHS.filter(s => getSurahStatus(s).isFullyExplored)
+                 : filter === 'partial'   ? SURAHS.filter(s => getSurahStatus(s).isPartial)
+                 : filter === 'horizon'   ? SURAHS.filter(s => horizonSurahs.includes(s.n))
+                 : SURAHS.filter(s => !getSurahStatus(s).isFullyExplored && !getSurahStatus(s).isPartial);
 
   return (
     <div className="app">
@@ -199,47 +208,42 @@ export default function QuranMap() {
           Quran Map · 114 Surahs
         </div>
 
-        <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:'clamp(28px,5vw,46px)', fontWeight:900, marginBottom:'0.75rem', lineHeight:1.1, background:'linear-gradient(135deg,#fff 30%,rgba(0,255,178,0.8) 70%,rgba(129,140,248,0.6))', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
+        <h1 style={{ fontFamily:"'Playfair Display',serif", fontSize:'clamp(26px,5vw,44px)', fontWeight:900, marginBottom:'0.75rem', lineHeight:1.1, background:'linear-gradient(135deg,#fff 30%,rgba(0,255,178,0.8) 70%,rgba(129,140,248,0.6))', WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent', backgroundClip:'text' }}>
           Your Quran Journey
         </h1>
 
-        <p style={{ fontSize:15, color:'var(--t3)', marginBottom:'2rem', fontWeight:300, lineHeight:1.75 }}>
-          114 surahs. Each circle is a surah. Click to explore.<br/>
-          <span style={{ color:'var(--c)' }}>Green</span> = explored ·
-          <span style={{ color:'var(--c3)', marginLeft:6 }}>Purple glow</span> = has scientific horizon ayah
+        <p style={{ fontSize:14, color:'var(--t3)', marginBottom:'2rem', fontWeight:300, lineHeight:1.75 }}>
+          Click any surah to see verse-level progress. Green = fully explored · Yellow = partially · Purple = has science horizon.
         </p>
 
-        {/* Progress bar */}
-        <div style={{ background:'var(--bg2)', border:'1px solid var(--b)', borderRadius:'var(--r)', padding:'1.25rem 1.5rem', marginBottom:'1.5rem', position:'relative', overflow:'hidden' }}>
-          <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'0.75rem' }}>
-            <span style={{ fontSize:13, color:'var(--t2)', fontWeight:500 }}>Surahs Explored</span>
-            <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:'var(--c)' }}>
-              {exploredCount} <span style={{ fontSize:13, color:'var(--t3)', fontWeight:400 }}>/ 114</span>
-            </span>
+        {/* Progress */}
+        <div style={{ background:'var(--bg2)', border:'1px solid var(--b)', borderRadius:'var(--r)', padding:'1.25rem 1.5rem', marginBottom:'1.5rem' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12, marginBottom:'1rem' }}>
+            {[
+              { label:'Complete',  value:fullySurahs,  color:'var(--c)'  },
+              { label:'In Progress',value:partialSurahs,color:'#F59E0B'  },
+              { label:'Remaining', value:114-fullySurahs-partialSurahs, color:'var(--t3)' },
+            ].map(s => (
+              <div key={s.label} style={{ textAlign:'center' }}>
+                <div style={{ fontFamily:"'Playfair Display',serif", fontSize:26, fontWeight:700, color:s.color }}>{s.value}</div>
+                <div style={{ fontSize:11, color:'var(--t3)', marginTop:2 }}>{s.label}</div>
+              </div>
+            ))}
           </div>
-          <div style={{ height:6, background:'var(--b)', borderRadius:3, overflow:'hidden' }}>
-            <div style={{ height:'100%', width:`${(exploredCount/114)*100}%`, background:'linear-gradient(90deg,var(--c),rgba(0,255,178,0.6))', borderRadius:3, transition:'width 0.5s ease', minWidth: exploredCount > 0 ? 8 : 0 }} />
-          </div>
-          <div style={{ display:'flex', gap:20, marginTop:'0.75rem' }}>
-            <span style={{ fontSize:11, color:'var(--t3)' }}>
-              <span style={{ color:'var(--c)' }}>●</span> {exploredCount} explored
-            </span>
-            <span style={{ fontSize:11, color:'var(--t3)' }}>
-              <span style={{ color:'var(--c3)' }}>●</span> {horizonSurahs.length} with science horizons
-            </span>
-            <span style={{ fontSize:11, color:'var(--t3)' }}>
-              ○ {114 - exploredCount} unexplored
-            </span>
+          <div style={{ height:6, background:'var(--b)', borderRadius:3, overflow:'hidden', display:'flex' }}>
+            <div style={{ height:'100%', width:`${(fullySurahs/114)*100}%`, background:'var(--c)', transition:'width 0.5s' }} />
+            <div style={{ height:'100%', width:`${(partialSurahs/114)*100}%`, background:'#F59E0B', transition:'width 0.5s' }} />
           </div>
         </div>
 
-        {/* Filter */}
+        {/* Filters */}
         <div style={{ display:'flex', gap:6, marginBottom:'2rem', flexWrap:'wrap' }}>
           {[
             { id:'all',      label:'All 114'          },
-            { id:'horizon',  label:'Has Science Ayah' },
-            { id:'explored', label:'Explored'         },
-            { id:'pending',  label:'Not Yet Explored' },
+            { id:'horizon',  label:'🔬 Has Science'   },
+            { id:'complete', label:'✅ Complete'       },
+            { id:'partial',  label:'🟡 In Progress'   },
+            { id:'pending',  label:'○ Not Started'    },
           ].map(f => (
             <button key={f.id} onClick={() => setFilter(f.id)}
               style={{ padding:'0.4rem 1rem', background:filter===f.id?'rgba(0,255,178,0.08)':'var(--card)', border:`1px solid ${filter===f.id?'rgba(0,255,178,0.25)':'var(--b)'}`, borderRadius:'50px', color:filter===f.id?'var(--c)':'var(--t3)', fontSize:12, fontFamily:"'DM Sans',sans-serif", cursor:'pointer', transition:'all 0.2s' }}>
@@ -249,131 +253,183 @@ export default function QuranMap() {
         </div>
 
         {/* Surah grid */}
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(80px, 1fr))', gap:10 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(82px,1fr))', gap:8 }}>
           {filtered.map(surah => {
-            const { hasHorizon, isExplored } = getSurahStatus(surah);
-            const isHovered = hovered === surah.n;
+            const status = getSurahStatus(surah);
+            const colors = getColors(status);
+            const isHov  = hovered === surah.n;
+            const isSel  = selected?.n === surah.n;
 
             return (
-              <div
-                key={surah.n}
-                onClick={() => handleClick(surah)}
+              <div key={surah.n}
+                onClick={() => setSelected(isSel ? null : surah)}
                 onMouseEnter={() => setHovered(surah.n)}
                 onMouseLeave={() => setHovered(null)}
                 style={{
-                  display:'flex', flexDirection:'column',
-                  alignItems:'center', justifyContent:'center',
-                  padding:'0.75rem 0.5rem',
-                  background: isExplored
-                    ? 'rgba(0,255,178,0.08)'
-                    : hasHorizon
-                    ? 'rgba(129,140,248,0.05)'
-                    : 'var(--card)',
-                  border:`1px solid ${
-                    isExplored ? 'rgba(0,255,178,0.3)'
-                    : hasHorizon ? 'rgba(129,140,248,0.25)'
-                    : 'var(--b)'
-                  }`,
-                  borderRadius:12,
-                  cursor:'pointer',
-                  transition:'all 0.2s',
+                  display:'flex', flexDirection:'column', alignItems:'center',
+                  padding:'0.7rem 0.4rem',
+                  background: isSel ? colors.card : isHov ? colors.card : 'var(--card)',
+                  border:`1px solid ${isSel ? colors.cardBorder : isHov ? colors.cardBorder : 'var(--b)'}`,
+                  borderRadius:12, cursor:'pointer', transition:'all 0.2s',
+                  transform: isHov && !isSel ? 'translateY(-2px)' : 'none',
+                  boxShadow: isSel ? colors.glow : 'none',
                   position:'relative',
-                  transform: isHovered ? 'translateY(-3px) scale(1.05)' : 'none',
-                  boxShadow: isHovered
-                    ? isExplored
-                      ? '0 8px 24px rgba(0,255,178,0.2)'
-                      : hasHorizon
-                      ? '0 8px 24px rgba(129,140,248,0.2)'
-                      : '0 8px 24px rgba(0,0,0,0.3)'
-                    : 'none',
                 }}
               >
-                {/* Surah number */}
+                {/* Progress ring effect */}
                 <div style={{
-                  width:36, height:36,
-                  borderRadius:'50%',
-                  background: isExplored
-                    ? 'var(--c)'
-                    : hasHorizon
-                    ? 'rgba(129,140,248,0.15)'
-                    : 'var(--bg2)',
-                  border:`1.5px solid ${
-                    isExplored ? 'var(--c)'
-                    : hasHorizon ? 'rgba(129,140,248,0.4)'
-                    : 'var(--b)'
-                  }`,
+                  width:38, height:38, borderRadius:'50%',
+                  background: status.isFullyExplored ? colors.circleBg
+                    : status.isPartial ? 'transparent' : colors.circleBg,
+                  border: status.isPartial
+                    ? `2px solid #F59E0B`
+                    : status.isFullyExplored
+                    ? 'none'
+                    : `1.5px solid ${colors.circle}`,
                   display:'flex', alignItems:'center', justifyContent:'center',
-                  fontSize:12, fontWeight:600,
-                  color: isExplored ? '#000'
-                    : hasHorizon ? 'var(--c3)'
-                    : 'var(--t3)',
-                  marginBottom:6,
-                  boxShadow: isExplored ? '0 0 10px rgba(0,255,178,0.4)'
-                    : hasHorizon ? '0 0 8px rgba(129,140,248,0.3)'
-                    : 'none',
-                  flexShrink:0,
+                  fontSize:11, fontWeight:700,
+                  color: status.isFullyExplored ? '#000' : colors.circleText,
+                  marginBottom:5,
+                  boxShadow: status.isFullyExplored || status.isPartial ? colors.glow : 'none',
+                  position:'relative', flexShrink:0,
                 }}>
+                  {status.isPartial && (
+                    <svg style={{ position:'absolute', inset:-2, width:42, height:42 }} viewBox="0 0 42 42">
+                      <circle cx="21" cy="21" r="19" fill="none" stroke="var(--b)" strokeWidth="2"/>
+                      <circle cx="21" cy="21" r="19" fill="none" stroke="#F59E0B" strokeWidth="2"
+                        strokeDasharray={`${(status.exploredCount/surah.ayaat)*119} 119`}
+                        strokeLinecap="round"
+                        transform="rotate(-90 21 21)"
+                      />
+                    </svg>
+                  )}
                   {surah.n}
                 </div>
 
-                {/* Surah name */}
-                <div style={{
-                  fontSize:10, fontWeight:500,
-                  color: isExplored ? 'var(--c)' : hasHorizon ? 'var(--c3)' : 'var(--t3)',
-                  textAlign:'center',
-                  lineHeight:1.3,
-                  overflow:'hidden',
-                  textOverflow:'ellipsis',
-                  whiteSpace:'nowrap',
-                  width:'100%',
-                  paddingInline:2,
-                }}>
+                <div style={{ fontSize:9, fontWeight:600, color:colors.text, textAlign:'center', lineHeight:1.3, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', width:'100%', paddingInline:2 }}>
                   {surah.name}
                 </div>
-
-                {/* Arabic name */}
-                <div style={{
-                  fontFamily:"'Tajawal',serif",
-                  fontSize:11, direction:'rtl',
-                  color:'var(--t3)',
-                  marginTop:2,
-                }}>
+                <div style={{ fontFamily:"'Tajawal',serif", fontSize:10, color:'var(--t3)', marginTop:1 }}>
                   {surah.arabic}
                 </div>
-
-                {/* Ayaat count */}
-                <div style={{ fontSize:9, color:'var(--t3)', marginTop:3, opacity:0.6 }}>
-                  {surah.ayaat} ayaat
+                <div style={{ fontSize:9, color:'var(--t3)', marginTop:2, opacity:0.5 }}>
+                  {status.exploredCount}/{surah.ayaat}
                 </div>
 
-                {/* Science indicator */}
-                {hasHorizon && (
-                  <div style={{
-                    position:'absolute', top:6, right:6,
-                    width:6, height:6, borderRadius:'50%',
-                    background:'var(--c3)',
-                    boxShadow:'0 0 5px var(--c3)',
-                  }} />
-                )}
-
-                {/* Explored checkmark */}
-                {isExplored && (
-                  <div style={{
-                    position:'absolute', top:6, left:6,
-                    fontSize:9, color:'var(--c)',
-                  }}>✓</div>
+                {/* Science dot */}
+                {status.hasHorizon && (
+                  <div style={{ position:'absolute', top:5, right:5, width:5, height:5, borderRadius:'50%', background:'var(--c3)', boxShadow:'0 0 4px var(--c3)' }} />
                 )}
               </div>
             );
           })}
         </div>
 
+        {/* ── SURAH DETAIL PANEL ── */}
+        {selected && (() => {
+          const status = getSurahStatus(selected);
+          const colors = getColors(status);
+          const allVerses = Array.from({ length: selected.ayaat }, (_, i) => `${selected.n}:${i+1}`);
+
+          return (
+            <div style={{ marginTop:'1.5rem', background:'var(--bg2)', border:`1px solid ${colors.cardBorder}`, borderRadius:'var(--r)', overflow:'hidden', position:'relative' }}>
+              <div style={{ position:'absolute', top:0, left:'20%', right:'20%', height:'1px', background:`linear-gradient(90deg,transparent,${colors.circle},transparent)` }} />
+
+              {/* Panel header */}
+              <div style={{ padding:'1.25rem 1.5rem', borderBottom:'1px solid var(--b)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+                <div>
+                  <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:4 }}>
+                    <span style={{ fontFamily:"'Playfair Display',serif", fontSize:20, fontWeight:700, color:'var(--t1)' }}>
+                      {selected.n}. {selected.name}
+                    </span>
+                    <span style={{ fontFamily:"'Tajawal',serif", fontSize:18, color:'var(--t2)', direction:'rtl' }}>
+                      {selected.arabic}
+                    </span>
+                  </div>
+                  <div style={{ fontSize:12, color:'var(--t3)' }}>
+                    {selected.ayaat} ayaat · {status.exploredCount} explored ·
+                    <span style={{ color:colors.text, marginLeft:4 }}>
+                      {status.isFullyExplored ? '✅ Complete' : status.isPartial ? `🟡 ${Math.round((status.exploredCount/selected.ayaat)*100)}% done` : '○ Not started'}
+                    </span>
+                  </div>
+                </div>
+                <button onClick={() => setSelected(null)}
+                  style={{ width:28, height:28, borderRadius:'50%', background:'var(--bg)', border:'1px solid var(--b)', color:'var(--t3)', fontSize:16, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'inherit' }}>
+                  ×
+                </button>
+              </div>
+
+              {/* Verse grid */}
+              <div style={{ padding:'1.25rem 1.5rem' }}>
+                <div style={{ fontSize:11, color:'var(--t3)', letterSpacing:'0.08em', textTransform:'uppercase', marginBottom:'0.85rem' }}>
+                  Verse-level progress
+                </div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                  {allVerses.map(key => {
+                    const isExp  = exploredVerses.has(key);
+                    const isHor  = !!HORIZON_AYAAT[key];
+                    const ayahN  = key.split(':')[1];
+
+                    return (
+                      <button key={key}
+                        onClick={() => navigate(`/research?ayah=${key}`)}
+                        title={`${key}${isHor?' · Science horizon':''}`}
+                        style={{
+                          width:36, height:36,
+                          borderRadius:'50%',
+                          background: isExp ? 'var(--c)'
+                            : isHor ? 'rgba(129,140,248,0.15)'
+                            : 'var(--bg)',
+                          border:`1.5px solid ${
+                            isExp ? 'var(--c)'
+                            : isHor ? 'rgba(129,140,248,0.4)'
+                            : 'var(--b)'
+                          }`,
+                          color: isExp ? '#000' : isHor ? 'var(--c3)' : 'var(--t3)',
+                          fontSize:10, fontWeight: isExp || isHor ? 600 : 400,
+                          cursor:'pointer', transition:'all 0.15s',
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                          boxShadow: isExp ? '0 0 8px rgba(0,255,178,0.3)' : isHor ? '0 0 6px rgba(129,140,248,0.2)' : 'none',
+                          fontFamily:"'DM Sans',sans-serif",
+                        }}
+                        onMouseOver={e => { e.currentTarget.style.transform='scale(1.15)'; }}
+                        onMouseOut={e => { e.currentTarget.style.transform='scale(1)'; }}
+                      >
+                        {ayahN}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Legend */}
+                <div style={{ display:'flex', gap:16, marginTop:'1rem', fontSize:11, color:'var(--t3)', flexWrap:'wrap' }}>
+                  <span><span style={{ color:'var(--c)' }}>● Green</span> = Explored</span>
+                  <span><span style={{ color:'var(--c3)' }}>● Purple</span> = Science horizon</span>
+                  <span>○ Gray = Not explored yet</span>
+                </div>
+
+                {/* Action buttons */}
+                <div style={{ display:'flex', gap:8, marginTop:'1.25rem' }}>
+                  <button onClick={() => navigate(`/search?q=${selected.name}`)}
+                    style={{ padding:'0.5rem 1.2rem', background:'var(--c)', color:'#000', border:'none', borderRadius:'50px', fontSize:13, fontWeight:600, fontFamily:"'DM Sans',sans-serif", cursor:'pointer' }}>
+                    Search this Surah
+                  </button>
+                  <button onClick={() => navigate(`/research?ayah=${selected.n}:1`)}
+                    style={{ padding:'0.5rem 1.2rem', background:'none', color:'var(--c3)', border:'1px solid rgba(129,140,248,0.3)', borderRadius:'50px', fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:'pointer' }}>
+                    Research First Ayah
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Legend */}
         <div style={{ marginTop:'2rem', padding:'1rem 1.25rem', background:'var(--bg2)', borderRadius:'var(--r2)', border:'1px solid var(--b)', display:'flex', flexWrap:'wrap', gap:16, fontSize:12, color:'var(--t3)' }}>
-          <span><span style={{ color:'var(--c)' }}>● Green circle</span> = You explored this surah</span>
-          <span><span style={{ color:'var(--c3)' }}>● Purple dot</span> = Has a scientific horizon ayah</span>
-          <span>○ Gray = Not yet explored</span>
-          <span style={{ marginLeft:'auto', color:'var(--t3)' }}>Click any surah to search & explore</span>
+          <span><span style={{ color:'var(--c)' }}>● Green</span> = All verses explored</span>
+          <span><span style={{ color:'#F59E0B' }}>⟳ Yellow ring</span> = Partially explored</span>
+          <span><span style={{ color:'var(--c3)' }}>● Purple dot</span> = Has science horizon</span>
+          <span>○ Gray = Not started</span>
         </div>
       </div>
     </div>
