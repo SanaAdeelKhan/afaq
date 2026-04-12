@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-const PROXY = 'http://localhost:3001';
+import { PROXY_URL as PROXY } from '../config.js';
 
 const SYSTEM_PROMPT = `You are Afaq Assistant — an Islamic scholar and scientific researcher integrated into the Afaq app (a Quran science exploration tool).
 

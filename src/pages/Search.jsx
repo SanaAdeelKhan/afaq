@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { fetchAudio } from "../services/quranApi";
 
-const PROXY = 'http://localhost:3001';
+import { PROXY_URL as PROXY } from '../config.js';
 
 const SUGGESTIONS = [
   "expanding universe","human embryo","iron from space",

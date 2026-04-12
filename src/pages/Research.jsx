@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
-const PROXY = 'http://localhost:3001';
+import { PROXY_URL as PROXY } from '../config.js';
 
 const EXAMPLES = [
   { ayah:"2:183",  label:"Fasting (Sawm)"    },
