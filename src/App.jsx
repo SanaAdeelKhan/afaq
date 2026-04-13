@@ -11,7 +11,7 @@ import "./styles/main.css";
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/afaq">
       <NavBar />
       <div style={{ paddingTop:"60px" }}>
         <Routes>
