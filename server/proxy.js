@@ -198,7 +198,7 @@ Rules:
             surah: parseInt(surah),
             ayah: parseInt(ayah),
             arabic: verse.text_uthmani || '',
-            translation: (d?.translations?.[0]?.text || verse.translations?.[0]?.text || '')
+            translation: (d?.translations?.[0]?.text || '').replace(/<[^>]+>/g, '').trim()
               .replace(/<[^>]+>/g,'').trim(),
             edition: 'Dr. Mustafa Khattab · Quran Foundation'
           };
