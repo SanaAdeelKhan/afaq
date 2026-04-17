@@ -3,19 +3,20 @@ import { fetchAudio, fetchVerse } from "../services/quranApi";
 import { PROXY_URL as PROXY } from '../config.js';
 
 const SUGGESTIONS = [
-  "fasting","prayer","embryo","iron","honey",
-  "soul","mountains","ocean","universe","water",
-  "patience","pairs",
+  "expanding universe","human embryo","iron from space",
+  "life from water","soul consciousness","mountains stability",
+  "deep ocean darkness","pairs in creation","patience hardship",
+  "fasting benefits","honey healing","prayer benefits",
 ];
 
 function ResultCard({ r }) {
-  const [audioUrl, setAudioUrl]           = useState(null);
-  const [audioLoading, setAudioLoading]   = useState(false);
-  const [playing, setPlaying]             = useState(false);
-  const [progress, setProgress]           = useState(0);
-  const [tafsir, setTafsir]               = useState(null);
+  const [audioUrl, setAudioUrl]         = useState(null);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [playing, setPlaying]           = useState(false);
+  const [progress, setProgress]         = useState(0);
+  const [tafsir, setTafsir]             = useState(null);
   const [tafsirLoading, setTafsirLoading] = useState(false);
-  const [expanded, setExpanded]           = useState(false);
+  const [expanded, setExpanded]         = useState(false);
   const audioRef = useRef(null);
 
   async function expand() {
@@ -69,6 +70,7 @@ function ResultCard({ r }) {
           </span>
         </div>
 
+        {/* Verified Arabic with tashkeel from quran.com */}
         <div style={{ fontFamily:"'Tajawal',serif", fontSize:'clamp(20px,3vw,26px)', fontWeight:500, direction:'rtl', textAlign:'right', color:'var(--t1)', lineHeight:2, marginBottom:'0.75rem' }}>
           {r.arabic}
         </div>
@@ -153,40 +155,42 @@ export default function Search() {
     localStorage.setItem("afaq_searched", JSON.stringify([...prev.slice(-49), sq]));
 
     try {
-      // Verse key — redirect to Research, don't search
       const verseKeyPattern = /^\d{1,3}:\d{1,3}$/;
+
       if (verseKeyPattern.test(sq)) {
-        setError(`To look up ${sq} directly, use the Research page — it gives full analysis, audio & tafsir.`);
-        setLoading(false);
-        return;
+        // Direct verse lookup — fetch verified text_uthmani from quran.com
+        const verseData = await fetchVerse(sq);
+        const verse = verseData?.verse;
+        if (!verse) throw new Error('Verse not found');
+        const arabic = verse.text_uthmani || '';
+        const translation = verse.translations?.[0]?.text?.replace(/<[^>]+>/g,'').trim() || '';
+        const [surah, ayah] = sq.split(':');
+        setResults([{ verseKey: sq, surah, ayah, arabic, translation, edition: 'Quran Foundation' }]);
+      } else {
+        // Semantic search via proxy (Groq rewriter + MCP search_quran)
+        const res = await fetch(`${PROXY}/api/search`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ query: sq })
+        });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+        const rawResults = data.results || [];
+
+        // Enrich each result with verified tashkeel Arabic from quran.com
+        const enriched = await Promise.all(
+          rawResults.map(async r => {
+            try {
+              const vd = await fetchVerse(r.verseKey);
+              const arabic = vd?.verse?.text_uthmani || r.arabic;
+              const translation = vd?.verse?.translations?.[0]?.text?.replace(/<[^>]+>/g,'').trim() || r.translation;
+              return { ...r, arabic, translation };
+            } catch {
+              return r; // fallback to MCP text if quran.com fails
+            }
+          })
+        );
+        setResults(enriched);
       }
-
-      // Semantic search via proxy (Groq rewriter + MCP)
-      const res = await fetch(`${PROXY}/api/smart-search`, {
-        method:'POST', headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({ query: sq })
-      });
-      const data = await res.json();
-      if (data.error) throw new Error(data.error);
-      const rawResults = (data.results || []).slice(0, 20);
-
-      // Enrich with verified tashkeel + translation from quran.com
-      const enriched = await Promise.all(
-        rawResults.map(async r => {
-          try {
-            const vd = await fetchVerse(r.verseKey);
-            const arabic      = vd?.verse?.text_uthmani || r.arabic;
-            const translation = vd?.translations?.[0]?.text?.replace(/<[^>]+>/g,'').trim()
-                             || r.translation;
-            const edition     = vd?.translations?.[0]?.resource_name || 'Quran Foundation';
-            return { ...r, arabic, translation, edition };
-          } catch {
-            return r;
-          }
-        })
-      );
-
-      setResults(enriched);
     } catch(e) {
       setError('Search failed. Make sure proxy is running.');
     }
@@ -209,8 +213,9 @@ export default function Search() {
           Ask the Quran
         </h1>
 
-        <p style={{ fontSize:15, color:'var(--t3)', marginBottom:'2rem', fontWeight:300, lineHeight:1.6 }}>
-          Search by single keyword or concept — in any language.
+        <p style={{ fontSize:15, color:'var(--t3)', marginBottom:'2.5rem', fontWeight:300, lineHeight:1.6 }}>
+          Search by meaning, concept, or topic — in any language.<br/>
+          Or enter a verse key like <span style={{ color:'var(--c)', fontFamily:'monospace' }}>2:183</span> to fetch it directly.
         </p>
 
         <div style={{ display:'flex', gap:10, marginBottom:'1.25rem', position:'relative' }}>
@@ -218,7 +223,7 @@ export default function Search() {
           <input type="text" value={query}
             onChange={e => setQuery(e.target.value)}
             onKeyDown={e => e.key==='Enter' && handleSearch()}
-            placeholder="iron, embryo, fasting, soul, honey..."
+            placeholder="expanding universe, embryo, 16:69..."
             style={{ flex:1, padding:'1rem 1.2rem 1rem 3rem', background:'var(--bg2)', border:'1px solid var(--b)', borderRadius:'50px', color:'var(--t1)', fontSize:15, fontFamily:"'DM Sans',sans-serif", outline:'none', transition:'all 0.2s' }}
             onFocus={e => { e.target.style.borderColor='rgba(0,255,178,0.3)'; e.target.style.boxShadow='0 0 0 3px rgba(0,255,178,0.06)'; }}
             onBlur={e =>  { e.target.style.borderColor='var(--b)'; e.target.style.boxShadow='none'; }}
@@ -229,8 +234,7 @@ export default function Search() {
           </button>
         </div>
 
-        {/* Single-word suggestions */}
-        <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:'1rem' }}>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:8, marginBottom:'3rem' }}>
           {SUGGESTIONS.map(s => (
             <button key={s} onClick={() => { setQuery(s); handleSearch(s); }}
               style={{ padding:'0.4rem 1rem', background:'var(--card)', border:'1px solid var(--b)', borderRadius:'50px', color:'var(--t3)', fontSize:12, fontFamily:"'DM Sans',sans-serif", cursor:'pointer', transition:'all 0.2s' }}
@@ -239,11 +243,6 @@ export default function Search() {
               {s}
             </button>
           ))}
-        </div>
-
-        {/* Compound word tip */}
-        <div style={{ fontSize:12, color:'var(--t3)', marginBottom:'2.5rem', padding:'0.65rem 1rem', background:'rgba(129,140,248,0.05)', border:'1px solid rgba(129,140,248,0.15)', borderRadius:8, fontWeight:300 }}>
-          💡 For compound topics like "iron from space" or "honey healing" — ask the <span style={{ color:'var(--c3)', fontWeight:500 }}>Afaq Assistant ↘</span> to find the exact ayah reference.
         </div>
 
         {loading && (
@@ -259,9 +258,9 @@ export default function Search() {
           </div>
         )}
 
-        {results && results.length === 0 && !error && (
+        {results && results.length === 0 && (
           <div style={{ textAlign:'center', padding:'3rem', color:'var(--t3)', fontSize:14, fontWeight:300 }}>
-            No ayaat found for "{searched}". Try a different keyword.
+            No ayaat found for "{searched}". Try different keywords.
           </div>
         )}
 
@@ -270,7 +269,7 @@ export default function Search() {
             <div style={{ fontSize:11, color:'var(--t3)', letterSpacing:'0.1em', textTransform:'uppercase', marginBottom:'1.25rem', fontWeight:500 }}>
               {results.length === 1
                 ? `1 ayah found · "${searched}"`
-                : `${results.length} ayaat found · "${searched}"${hasMore && !showAll ? ' · showing top 5' : ''}`
+                : `${results.length} ayaat found · "${searched}"${hasMore && !showAll ? ' · Showing top 5' : ''}`
               }
             </div>
 
@@ -280,7 +279,7 @@ export default function Search() {
 
             {hasMore && !showAll && (
               <button onClick={() => setShowAll(true)}
-                style={{ marginTop:'1.5rem', width:'100%', padding:'0.75rem', background:'rgba(0,255,178,0.07)', border:'1px solid rgba(0,255,178,0.2)', borderRadius:'var(--r)', color:'var(--c)', fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:'pointer', fontWeight:500 }}>
+                style={{ marginTop:'1.5rem', width:'100%', padding:'0.75rem', background:'rgba(0,255,178,0.07)', border:'1px solid rgba(0,255,178,0.2)', borderRadius:'var(--r)', color:'var(--c)', fontSize:13, fontFamily:"'DM Sans',sans-serif", cursor:'pointer', fontWeight:500, transition:'all 0.2s' }}>
                 Show all {results.length} results ↓
               </button>
             )}
@@ -288,9 +287,10 @@ export default function Search() {
             <div style={{ marginTop:'2rem', display:'flex', gap:10, alignItems:'flex-start', padding:'0.85rem 1.1rem', background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:10 }}>
               <span style={{ fontSize:16, flexShrink:0 }}>⚠️</span>
               <div style={{ fontSize:12, color:'var(--t3)', lineHeight:1.65, fontWeight:300 }}>
-                <span style={{ fontWeight:600, color:'var(--c2)' }}>Quran text & translation</span> are verified from <span style={{ color:'var(--c)' }}>Quran Foundation (quran.com)</span> with full tashkeel.{' '}
-                <span style={{ fontWeight:600, color:'var(--c2)' }}>Search ranking</span> uses semantic AI and may surface loosely related ayaat — always verify with a scholar.{' '}
-                Report issues to <a href="mailto:sanaadeel493@gmail.com" style={{ color:'var(--c)', textDecoration:'none' }}>sanaadeel493@gmail.com</a>
+                <span style={{ fontWeight:600, color:'var(--c2)' }}>Quran text & translation</span> are sourced directly from <span style={{ color:'var(--c)' }}>Quran Foundation (quran.com)</span> — verified and vowelized.{' '}
+                <span style={{ fontWeight:600, color:'var(--c2)' }}>Search ranking</span> uses <span style={{ color:'var(--c)' }}>quran.ai MCP semantic search</span> and may surface loosely related ayaat.{' '}
+                Always verify with a trusted scholar. Report issues to{' '}
+                <a href="mailto:sanaadeel493@gmail.com" style={{ color:'var(--c)', textDecoration:'none' }}>sanaadeel493@gmail.com</a>
               </div>
             </div>
           </div>

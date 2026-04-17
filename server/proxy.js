@@ -152,6 +152,66 @@ app.post('/api/search', async (req, res) => {
   } catch(e) { console.error('Search error:', e.message); res.status(502).json({ error: e.message }); }
 });
 
+
+app.post('/api/smart-search', async (req, res) => {
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ error:'No query' });
+  try {
+    // Groq finds exact verse keys — no MCP search, no hallucinated text
+    const verseKeysRaw = await groq([
+      { role:'system', content:`You are a Quran scholar with perfect knowledge of all 6236 verses.
+The user will give you a topic or word. Return ALL verse keys (surah:ayah) that DIRECTLY mention this topic.
+Rules:
+- Only verses that explicitly and directly mention this topic — no loose associations
+- Return a valid JSON array only, like ["2:183", "16:69", "57:25"]
+- Maximum 15 verses. If fewer are relevant, return fewer.
+- If nothing directly matches, return []
+- Return ONLY the JSON array. No explanation. No markdown.` },
+      { role:'user', content:`Topic: "${query}"` }
+    ], { maxTokens:200, temperature:0.1 });
+
+    let verseKeys = [];
+    try {
+      const cleaned = verseKeysRaw.replace(/\`\`\`json|\`\`\`/g,'').trim();
+      verseKeys = JSON.parse(cleaned);
+      if (!Array.isArray(verseKeys)) verseKeys = [];
+    } catch { verseKeys = []; }
+
+    if (verseKeys.length === 0) {
+      return res.json({ results: [], query });
+    }
+
+    // Fetch each verse from quran.com — verified tashkeel + translation
+    const results = await Promise.all(
+      verseKeys.slice(0,15).map(async (vk) => {
+        try {
+          const r = await fetch(
+            `https://api.quran.com/api/v4/verses/by_key/${vk}?translations=131&fields=text_uthmani`
+          );
+          if (!r.ok) return null;
+          const d = await r.json();
+          const verse = d?.verse;
+          if (!verse) return null;
+          const [surah, ayah] = vk.split(':');
+          return {
+            verseKey: vk,
+            surah: parseInt(surah),
+            ayah: parseInt(ayah),
+            arabic: verse.text_uthmani || '',
+            translation: (d?.translations?.[0]?.text || verse.translations?.[0]?.text || '')
+              .replace(/<[^>]+>/g,'').trim(),
+            edition: 'Dr. Mustafa Khattab · Quran Foundation'
+          };
+        } catch { return null; }
+      })
+    );
+
+    res.json({ results: results.filter(Boolean), query });
+  } catch(e) {
+    console.error('Smart search error:', e.message);
+    res.status(502).json({ error: e.message });
+  }
+});
 app.post('/api/verse', async (req, res) => {
   const { verseKey } = req.body;
   if (!verseKey) return res.status(400).json({ error:'No verseKey' });
