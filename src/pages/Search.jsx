@@ -153,10 +153,17 @@ export default function Search() {
     localStorage.setItem("afaq_searched", JSON.stringify([...prev.slice(-49), sq]));
 
     try {
-      // Verse key — redirect to Research, don't search
+      // Verse key — fetch directly
       const verseKeyPattern = /^\d{1,3}:\d{1,3}$/;
       if (verseKeyPattern.test(sq)) {
-        setError(`To look up ${sq} directly, use the Research page — it gives full analysis, audio & tafsir.`);
+        const [vd, td] = await Promise.all([
+          fetchVerse(sq),
+          fetch(`${PROXY}/api/translation`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ verseKey:sq }) }).then(r=>r.json())
+        ]);
+        const arabic = vd?.verse?.text_uthmani || '';
+        const translation = (td?.text || '').replace(/<[^>]+>/g,'').trim();
+        const [surah, ayah] = sq.split(':');
+        setResults([{ verseKey:sq, surah, ayah, arabic, translation, edition:'Dr. Mustafa Khattab · Quran Foundation' }]);
         setLoading(false);
         return;
       }
@@ -210,7 +217,7 @@ export default function Search() {
         </h1>
 
         <p style={{ fontSize:15, color:'var(--t3)', marginBottom:'2rem', fontWeight:300, lineHeight:1.6 }}>
-          Search by single keyword or concept — in any language.
+          Search by single keyword or concept.
         </p>
 
         <div style={{ display:'flex', gap:10, marginBottom:'1.25rem', position:'relative' }}>
