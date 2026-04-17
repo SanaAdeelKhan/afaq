@@ -185,21 +185,24 @@ Rules:
     const results = await Promise.all(
       verseKeys.slice(0,15).map(async (vk) => {
         try {
-          const r = await fetch(
-            `https://api.quran.com/api/v4/verses/by_key/${vk}?translations=131&fields=text_uthmani`
-          );
-          if (!r.ok) return null;
-          const d = await r.json();
-          const verse = d?.verse;
-          if (!verse) return null;
+          const vr = await fetch(`https://api.quran.com/api/v4/verses/by_key/${vk}?fields=text_uthmani`);
+          if (!vr.ok) return null;
+          const vd = await vr.json();
+          const arabic = vd?.verse?.text_uthmani || '';
+          let translation = '';
+          try {
+            const raw2 = await toolWithRetry('fetch_translation', { ayahs: vk, editions: 'en-abdel-haleem' });
+            const p2 = JSON.parse(raw2);
+            const entries = p2?.results?.['en-abdel-haleem'] || [];
+            translation = (entries[0]?.text || '').replace(/<[^>]+>/g,'').trim();
+          } catch {}
           const [surah, ayah] = vk.split(':');
           return {
             verseKey: vk,
             surah: parseInt(surah),
             ayah: parseInt(ayah),
-            arabic: verse.text_uthmani || '',
-            translation: (d?.translations?.[0]?.text || '').replace(/<[^>]+>/g, '').trim()
-              .replace(/<[^>]+>/g,'').trim(),
+            arabic,
+            translation,
             edition: 'Dr. Mustafa Khattab · Quran Foundation'
           };
         } catch { return null; }
