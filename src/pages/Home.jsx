@@ -27,9 +27,9 @@ function SolarSystem({ onExplore }) {
     window.addEventListener('resize', resize);
 
     const ORBITS = [
-      { r:90,  speed:0.6,  size:9,  color:'#00FFB2', label:'Confirmed (12)',    glow:'rgba(0,255,178,0.5)'   },
-      { r:145, speed:0.35, size:7,  color:'#F59E0B',  label:'Approaching (8)',   glow:'rgba(245,158,11,0.5)'  },
-      { r:200, speed:0.2,  size:5,  color:'#818CF8',  label:'Still Waiting (6)', glow:'rgba(129,140,248,0.5)' },
+      { r:90,  speed:0.6,  size:16,  color:'#00FFB2', label:'Confirmed (12)',    glow:'rgba(0,255,178,0.5)'   },
+      { r:145, speed:0.35, size:13,  color:'#F59E0B',  label:'Approaching (8)',   glow:'rgba(245,158,11,0.5)'  },
+      { r:200, speed:0.2,  size:10,  color:'#818CF8',  label:'Still Waiting (6)', glow:'rgba(129,140,248,0.5)' },
     ];
 
     let stars = [];
@@ -101,25 +101,16 @@ function SolarSystem({ onExplore }) {
         ctx.fill();
 
         // Planet
+        const pulseFactor = 1 + 0.15 * Math.sin(t * 2 + oi * 1.5);
         ctx.beginPath();
-        ctx.arc(px, py, o.size, 0, Math.PI * 2);
+        ctx.arc(px, py, o.size * pulseFactor, 0, Math.PI * 2);
         ctx.fillStyle = o.color;
         ctx.shadowColor = o.color;
-        ctx.shadowBlur = 10;
+        ctx.shadowBlur = 15 + 10 * pulseFactor;
         ctx.fill();
         ctx.shadowBlur = 0;
 
         // Label
-        ctx.save();
-        ctx.font = '500 10px DM Sans, system-ui';
-        ctx.fillStyle = o.color;
-        ctx.globalAlpha = 0.9;
-        ctx.textAlign = 'center';
-        const labelAngle = angle + 0.3;
-        const lx = cx + Math.cos(labelAngle) * (o.r + o.size + 16);
-        const ly = cy + Math.sin(labelAngle) * (o.r + o.size + 16);
-        ctx.fillText(o.label, lx, ly + 3);
-        ctx.restore();
       });
 
       // Sun — center
