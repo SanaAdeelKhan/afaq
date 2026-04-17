@@ -1,6 +1,5 @@
 import { useState, useRef } from "react";
-import { fetchAudio } from "../services/quranApi";
-import { mcpTafsir } from "../services/mcpSearch";
+import { fetchAudio, fetchTafsir } from "../services/quranApi";
 import { saveReflection, addBookmark, isLoggedIn } from "../services/userApi";
 
 export default function AyahCard({ ayah, type, defaultOpen = false }) {
@@ -52,7 +51,9 @@ export default function AyahCard({ ayah, type, defaultOpen = false }) {
     setTafsirLoading(true);
     setTafsir(null);
     try {
-      const text = await mcpTafsir(ayah.verseKey, edition);
+      const data = await fetchTafsir(ayah.verseKey);
+      const raw = data?.tafsir?.text || data?.tafsirs?.[0]?.text || '';
+      const text = raw.replace(/<[^>]+>/g,'').trim();
       setTafsir(text || ayah.tafsirNote);
     } catch { setTafsir(ayah.tafsirNote); }
     setTafsirLoading(false);

@@ -96,6 +96,7 @@ function FloatingNote({ ayahKey }) {
       alignItems: 'flex-start',
       gap: 0,
     }}>
+      {/* Expanded note pad */}
       {open && (
         <div style={{
           width: 280,
@@ -106,6 +107,7 @@ function FloatingNote({ ayahKey }) {
           overflow: 'hidden',
           boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
         }}>
+          {/* Header */}
           <div style={{ padding: '0.65rem 0.9rem', borderBottom: '1px solid rgba(129,140,248,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <span style={{ fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'rgba(129,140,248,0.9)', fontWeight: 600 }}>
               📝 Reflection · {ayahKey}
@@ -113,6 +115,7 @@ function FloatingNote({ ayahKey }) {
             <button onClick={() => setOpen(false)}
               style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', fontSize: 16, cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
           </div>
+          {/* Textarea */}
           <textarea
             value={note}
             onChange={e => { setNote(e.target.value); setSaved(false); }}
@@ -132,6 +135,7 @@ function FloatingNote({ ayahKey }) {
               boxSizing: 'border-box',
             }}
           />
+          {/* Footer */}
           <div style={{ padding: '0.5rem 0.9rem', borderTop: '1px solid rgba(129,140,248,0.1)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontStyle: 'italic' }}>
               {note.length > 0 ? `${note.length} chars` : 'No note yet'}
@@ -154,6 +158,7 @@ function FloatingNote({ ayahKey }) {
         </div>
       )}
 
+      {/* Toggle bubble */}
       <button onClick={() => setOpen(o => !o)}
         title={open ? 'Close reflection' : 'Open reflection note'}
         style={{
@@ -173,6 +178,7 @@ function FloatingNote({ ayahKey }) {
           position: 'relative',
         }}>
         📝
+        {/* dot if note exists */}
         {hasNote && !open && (
           <div style={{
             position: 'absolute',
@@ -196,15 +202,16 @@ export default function Research() {
   const [fetching, setFetching]   = useState(false);
   const [error, setError]         = useState(null);
   const [openIdx, setOpenIdx]     = useState(null);
+  const [flagged, setFlagged]       = useState({});
 
   // Audio + Tafsir
-  const [audioUrl, setAudioUrl]           = useState(null);
-  const [audioLoading, setAudioLoading]   = useState(false);
-  const [playing, setPlaying]             = useState(false);
-  const [progress, setProgress]           = useState(0);
-  const [tafsir, setTafsir]               = useState(null);
+  const [audioUrl, setAudioUrl]         = useState(null);
+  const [audioLoading, setAudioLoading] = useState(false);
+  const [playing, setPlaying]           = useState(false);
+  const [progress, setProgress]         = useState(0);
+  const [tafsir, setTafsir]             = useState(null);
   const [tafsirLoading, setTafsirLoading] = useState(false);
-  const [showTafsir, setShowTafsir]       = useState(false);
+  const [showTafsir, setShowTafsir]     = useState(false);
   const audioRef = useRef(null);
 
   // Journey
@@ -555,7 +562,7 @@ Answer questions about its scientific dimensions, tafsir, practical implications
         {sections && (
           <div style={{ marginBottom:'2rem' }}>
 
-            {/* Disclaimer */}
+            {/* ── Disclaimer ── */}
             <div style={{ display:'flex', gap:10, alignItems:'flex-start', padding:'0.85rem 1.1rem', background:'rgba(245,158,11,0.06)', border:'1px solid rgba(245,158,11,0.2)', borderRadius:10, marginBottom:'1.25rem' }}>
               <span style={{ fontSize:16, flexShrink:0 }}>⚠️</span>
               <div>
@@ -593,10 +600,17 @@ Answer questions about its scientific dimensions, tafsir, practical implications
                       <div style={{ fontSize:14, color:"var(--t1)", lineHeight:1.9, fontWeight:300, whiteSpace:"pre-wrap", paddingTop:"1rem" }}>
                         {s.content}
                       </div>
+                      <div style={{ marginTop:"0.85rem", paddingTop:"0.75rem", borderTop:"1px solid var(--b)", display:"flex", justifyContent:"flex-end" }}>
+                        <button onClick={e => { e.stopPropagation(); setFlagged(f => ({ ...f, [s.key]: !f[s.key] })); }}
+                          style={{ padding:"0.3rem 0.9rem", background:flagged[s.key]?"rgba(245,158,11,0.12)":"transparent", border:"1px solid "+(flagged[s.key]?"rgba(245,158,11,0.35)":"rgba(255,255,255,0.08)"), borderRadius:20, color:flagged[s.key]?"var(--c2)":"rgba(255,255,255,0.25)", fontSize:11, cursor:"pointer", transition:"all 0.2s", display:"flex", alignItems:"center", gap:5 }}>
+                          {flagged[s.key] ? "⚑ Flagged as uncertain" : "⚐ Flag this analysis"}
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
               ))}
+            </div>
             </div>
           </div>
         )}
@@ -674,7 +688,7 @@ Answer questions about its scientific dimensions, tafsir, practical implications
         )}
       </div>
 
-      {/* Floating Reflection Note — visible whenever an ayah is loaded */}
+      {/* ── Floating Reflection Note — visible whenever an ayah is loaded ── */}
       {ayahData && !fetching && <FloatingNote ayahKey={ayahData.key} />}
     </div>
   );
