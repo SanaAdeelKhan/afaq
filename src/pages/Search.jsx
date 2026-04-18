@@ -1,4 +1,5 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { fetchAudio, fetchVerse } from "../services/quranApi";
 import { PROXY_URL as PROXY } from '../config.js';
 
@@ -143,6 +144,11 @@ export default function Search() {
   const [error, setError]       = useState(null);
   const [searched, setSearched] = useState('');
   const [showAll, setShowAll]   = useState(false);
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const q = searchParams.get('q');
+    if (q) { setQuery(q); handleSearch(q); }
+  }, []);
 
   async function handleSearch(q) {
     const sq = (q || query).trim();

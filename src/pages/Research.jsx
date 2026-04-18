@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { PROXY_URL as PROXY } from '../config.js';
 import { fetchAudio, fetchTafsir } from '../services/quranApi.js';
 
@@ -217,6 +218,11 @@ export default function Research() {
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef(null);
 
+  const [searchParams] = useSearchParams();
+  useEffect(() => {
+    const ayah = searchParams.get('ayah');
+    if (ayah) { setVerseKey(ayah); fetchAyah(ayah); }
+  }, []);
   useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 
   useEffect(() => {
