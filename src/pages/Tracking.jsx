@@ -213,7 +213,7 @@ export default function Tracking() {
                         {/* Actions */}
                         {editingKey !== key && (
                           <div style={{ padding:'0.5rem 1.25rem 0.75rem 1.6rem', display:'flex', gap:8 }}>
-                            <button onClick={() => navigate(`/?ayah=${key}`)}
+                            <button onClick={() => navigate(`/research?ayah=${key}`)}
                               style={{ fontSize:11, color:'var(--c)', background:'rgba(0,255,178,0.07)', border:'1px solid rgba(0,255,178,0.15)', borderRadius:'50px', padding:'0.3rem 0.75rem', cursor:'pointer', fontFamily:"'DM Sans',sans-serif" }}>
                               View Ayah
                             </button>
