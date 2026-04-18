@@ -37,18 +37,19 @@ The core insight: *The gap in years between revelation and scientific confirmati
 ## Features
 
 ### 🌌 Horizons Page
-- 29 ayaat mapped across 3 scientific horizons
-- Compact list view — click any ayah to expand
-- Each expanded card shows:
-  - Arabic text + English translation (Abdel Haleem)
+- 26 ayaat mapped across 3 scientific horizons
+- Interactive solar system animation — each orbit represents a horizon
+- Click any ayah to expand full detail:
+  - Fully vowelized Arabic (Uthmani script) + English translation
   - Gap counter: *"1,300 years of human ignorance"*
   - Live audio recitation (Mishary Rashid Al-Afasy)
-  - Live Tafsir (Ibn Kathir, Al-Tabari, Al-Saadi) via quran.ai MCP
-  - Scholar switcher dropdown
-  - Personal reflection journal
+  - Full Tafsir Ibn Kathir via quran.ai MCP — no truncation
+  - Scholar switcher (Ibn Kathir, Maariful Quran, Al-Tabari, Al-Saadi)
+  - Personal reflection journal with local save
 
 ### 🔬 Research Page
-- Enter any verse key (e.g. `2:183`, `16:69`, `57:25`)
+- Enter any verse key (e.g. `2:183`, `16:69`, `57:25`) or use **Quran Journey** mode
+- **Quran Journey** — navigate the entire Quran ayah by ayah, bookmark auto-saved
 - AI generates 6-section scientific analysis:
   1. 📖 Surface Meaning
   2. 🔬 Scientific Discovery
@@ -57,19 +58,24 @@ The core insight: *The gap in years between revelation and scientific confirmati
   5. 🌱 Practical Implication for daily life
   6. ✨ Beyond Tafsir — what classical scholars couldn't have known
 - **Live chatbot** for counter-questioning with full conversation history
-- Powered by Groq Llama 3.3 70B (free)
+- **Floating reflection note** — write while you read, tied to each ayah
+- Powered by Groq Llama 3.3 70B
 
 ### 🔍 Search Page
-- Semantic search across 6,236 ayaat via quran.ai MCP
-- Expandable results with audio + tafsir + translation
-- Suggested topics: expanding universe, embryo, fasting, iron from space...
+- AI-powered smart search — Groq identifies exact verse references, verified Arabic fetched from Quran Foundation
+- Fully vowelized tashkeel Arabic — never AI-generated text
+- Single keyword suggestions: fasting, prayer, embryo, iron, honey, soul...
+- For compound topics — Afaq Assistant guides to exact ayah reference
+- Direct verse key lookup: type `57:25` to fetch that exact ayah
+- Expandable results with audio + full tafsir + translation
+- Show 5 results + load more
 
 ### 🗺️ Quran Map
 - All 114 surahs as interactive circles
-- 🟢 Green = fully explored · 🟡 Yellow ring = partially explored · 🔵 Purple = has science horizon ayah
-- Click any surah → verse-level detail panel
-- Each ayah circle shows explored/unexplored status
-- Progress bar across all 114 surahs
+- 🟢 Green = fully explored · 🟡 Yellow ring = partially explored · 🔵 Purple dot = has science horizon ayah
+- Click any surah → verse-level progress panel
+- Navigate directly to Research or Search from any surah
+- Progress tracking across all 114 surahs
 
 ### 📝 Tracking Page
 - **Journal** — all saved reflections with edit/delete
@@ -78,11 +84,11 @@ The core insight: *The gap in years between revelation and scientific confirmati
 - **Searched** — full search history as clickable chips
 - Stats dashboard: streak, reflections, bookmarks, research count
 
-### 💬 Global Chatbot
-- Persistent AI assistant on every page (bottom-right bubble)
+### 💬 Afaq Assistant
+- Persistent AI assistant on every page (bottom-right)
 - Full conversation history maintained across navigation
-- Clickable verse references `[51:47]` that navigate the app
-- Ask about any Quranic event, topic, or verse
+- Clickable verse references `[51:47]` that navigate directly in the app
+- Ask about any Quranic topic, event, or concept
 - Suggested questions on first open
 - Unread message badge
 
@@ -95,21 +101,21 @@ The core insight: *The gap in years between revelation and scientific confirmati
 │          Frontend (React + Vite)            │
 │         GitHub Pages — Auto Deploy          │
 │                                             │
-│  Pages: Horizons / Map / Research /         │
-│         Search / Tracking                   │
+│  Pages: Horizons / Research / Search /      │
+│         Map / Tracking                      │
 │  Components: AyahCard / GlobalChat /        │
 │              NavBar / StreakBar /            │
-│              SolarHero / StarField          │
+│              FloatingNote / StarField       │
 └──────────────┬──────────────────────────────┘
                │ HTTP
 ┌──────────────▼──────────────────────────────┐
 │         Proxy Server (Node.js)              │
 │         Render.com — Auto Deploy            │
 │                                             │
-│  Routes: /api/search   /api/tafsir          │
-│          /api/verse    /api/translation     │
-│          /api/analyse  /api/chat            │
-│          /api/morphology                    │
+│  Routes: /api/smart-search  /api/tafsir     │
+│          /api/verse         /api/translation│
+│          /api/analyse       /api/chat       │
+│          /api/search                        │
 └──────────┬──────────────┬───────────────────┘
            │              │
 ┌──────────▼───┐  ┌───────▼───────────────────┐
@@ -117,14 +123,16 @@ The core insight: *The gap in years between revelation and scientific confirmati
 │  MCP Server  │  │   Llama 3.3 70B            │
 │              │  │                            │
 │  Tools used: │  │  - Scientific analysis     │
-│  search_quran│  │  - Research chatbot        │
-│  fetch_tafsir│  │  - Global assistant        │
-│  fetch_quran │  └────────────────────────────┘
-│  fetch_trans │
-│  fetch_morpho│  ┌────────────────────────────┐
-└──────────────┘  │  Quran Foundation API      │
-                  │  (Public, no auth)         │
+│  search_quran│  │  - Smart verse finder      │
+│  fetch_tafsir│  │  - Research chatbot        │
+│  fetch_quran │  │  - Afaq Assistant          │
+│  fetch_trans │  └────────────────────────────┘
+│  fetch_morpho│
+└──────────────┘  ┌────────────────────────────┐
+                  │  Quran Foundation API      │
+                  │  api.quran.com/api/v4      │
                   │  - Audio recitation        │
+                  │  - Uthmani tashkeel Arabic │
                   │  - Verse data              │
                   └────────────────────────────┘
 ```
@@ -133,38 +141,44 @@ The core insight: *The gap in years between revelation and scientific confirmati
 
 ## APIs & Tools Used
 
-### Content APIs (Quran Foundation)
-- `GET /api/v4/recitations/{id}/by_ayah/{key}` — Live audio
-- `GET /api/v4/verses/by_key/{key}` — Verse data
+### Quran Foundation Content APIs
+- `GET /api/v4/recitations/7/by_ayah/{key}` — Mishary Rashid live audio
+- `GET /api/v4/verses/by_key/{key}?fields=text_uthmani` — Verified vowelized Arabic
 
 ### quran.ai MCP Server
 | Tool | Used For |
 |------|----------|
 | `search_quran` | Semantic search across 6,236 ayaat |
-| `fetch_tafsir` | Live Ibn Kathir, Al-Tabari, Al-Saadi |
-| `fetch_translation` | Abdel Haleem translation |
+| `fetch_tafsir` | Full Ibn Kathir, Al-Tabari, Al-Saadi — no truncation |
+| `fetch_translation` | Abdel Haleem verified translation |
 | `fetch_quran` | Arabic text (Uthmani script) |
 | `fetch_word_morphology` | Word-level linguistic analysis |
 
-### User APIs (Quran Foundation)
-- Bookmarks, Notes/Reflections, Streak tracking
-- OAuth2 with PKCE (ready for integration)
+### Quran Foundation User APIs
+- **Streak Tracking** — Daily engagement streak on every page
+- **Bookmarks** — Save any ayah, accessible from Tracking page
+- **Post APIs (Reflections)** — Personal journal, editable and deletable
 
-### AI
-- **Groq** — Llama 3.3 70B — completely free, 30 req/min
-- Used for: scientific analysis, research chatbot, global assistant
+### AI — Groq (Llama 3.3 70B, free)
+- Scientific analysis engine (6-section deep analysis per ayah)
+- Smart search — finds exact verse keys for any topic (no MCP hallucination)
+- Research chatbot — counter-questions and scholarly discussion
+- Afaq Assistant — global guide across all pages
+
+> **Important:** Groq AI only provides verse *references* and *analysis* — all actual Quran text, translation, and tafsir always comes from Quran Foundation. Never AI-generated Quran text.
 
 ---
 
-## Judging Criteria Coverage
+## What Makes Afaq Different
 
-| Criteria | Points | How Afaq Scores |
-|----------|--------|-----------------|
-| Impact on Quran Engagement | 30pts | Every ayah has audio, tafsir, reflection, research, tracking |
-| Product Quality & UX | 20pts | Cinematic dark UI, solar system hero, smooth interactions |
-| Technical Execution | 20pts | MCP integration, proxy server, auto-deploy, localStorage |
-| Innovation & Creativity | 15pts | "The Gap" counter, Still Waiting section, AI research engine |
-| Effective API Use | 15pts | 5 MCP tools + Audio API + User APIs all used meaningfully |
+| Feature | Afaq | Others |
+|---------|------|--------|
+| Quran text source | Quran Foundation (verified) | Often AI-generated |
+| Tafsir | Full, untruncated, live from MCP | Static or summarized |
+| Scientific analysis | 6-section AI deep dive per ayah | Generic summaries |
+| Search | Groq finds exact verses, verified text | Keyword matching |
+| Journey mode | Navigate all 6,236 ayaat with bookmark | Not available |
+| Tracking | Streak + journal + map + history | Basic or none |
 
 ---
 
@@ -201,21 +215,15 @@ cd server && node proxy.js
 npm run dev
 ```
 
-Open `http://localhost:5173`
+Open `http://localhost:5173/afaq`
 
 ---
 
 ## Deployment
 
 ### Auto-Deploy Setup
-- **Frontend** → GitHub Pages via GitHub Actions
-- **Backend** → Render.com (free tier)
-- Every `git push` to `main` triggers both automatically
-
-### Deploy Frontend Manually
-```bash
-npm run deploy
-```
+- **Frontend** → GitHub Pages via `npm run deploy`
+- **Backend** → Render.com (free tier) — auto-redeploys on `git push`
 
 ### Environment Variables (Render)
 | Key | Value |
@@ -231,26 +239,27 @@ afaq/
 ├── .github/workflows/deploy.yml    # Auto-deploy to GitHub Pages
 ├── public/404.html                 # SPA routing fix for GitHub Pages
 ├── src/
-│   ├── data/horizons.js            # 29 ayaat database — the soul
+│   ├── data/horizons.js            # 26 ayaat database — the soul of Afaq
+│   ├── config.js                   # Proxy URL (dev/prod switch)
 │   ├── services/
 │   │   ├── quranApi.js             # Quran Foundation Content API
 │   │   ├── userApi.js              # Quran Foundation User API
 │   │   └── mcpSearch.js            # quran.ai MCP client
 │   ├── components/
 │   │   ├── AyahCard.jsx            # Core card: audio + tafsir + reflection
-│   │   ├── GlobalChat.jsx          # Persistent AI chatbot
+│   │   ├── GlobalChat.jsx          # Persistent Afaq Assistant
 │   │   ├── NavBar.jsx
 │   │   ├── StreakBar.jsx
 │   │   └── StarField.jsx
 │   ├── pages/
-│   │   ├── Home.jsx                # Horizons + Solar system
-│   │   ├── Research.jsx            # AI analysis + chatbot
-│   │   ├── Search.jsx              # MCP semantic search
-│   │   ├── QuranMap.jsx            # 114 surah journey map
-│   │   └── Tracking.jsx            # Journal + history
+│   │   ├── Home.jsx                # Horizons + Solar system animation
+│   │   ├── Research.jsx            # AI analysis + Journey mode + chatbot
+│   │   ├── Search.jsx              # Smart search + verse key lookup
+│   │   ├── QuranMap.jsx            # 114 surah interactive journey map
+│   │   └── Tracking.jsx            # Journal + bookmarks + history
 │   └── App.jsx
 └── server/
-    ├── proxy.js                    # Node.js MCP + Groq proxy
+    ├── proxy.js                    # Node.js — MCP + Groq + all routes
     ├── .env                        # GROQ_API_KEY (never committed)
     └── package.json
 ```
@@ -258,8 +267,6 @@ afaq/
 ---
 
 ## The Ayaat Database
-
-Full list of mapped ayaat across three horizons:
 
 ### ✅ Confirmed (12)
 | Ayah | Topic | Gap |
@@ -304,7 +311,7 @@ Full list of mapped ayaat across three horizons:
 ## Built With Love
 
 - **Idea & Vision** — Sana Adeel Khan
-- **Development** — Built in WSL Ubuntu on Windows
+- **Development** — Built in WSL Ubuntu on Windows, with Claude as AI pair programmer
 - **Inspiration** — *"And of knowledge, you have been given only a little."* (17:85)
 
 ---
@@ -313,7 +320,7 @@ Full list of mapped ayaat across three horizons:
 
 - **Hackathon:** Quran Foundation Hackathon — Ramadan 2026
 - **Organized by:** Provision Launch & Quran Foundation
-- **Deadline:** End of Shawwal 1447 (April 20, 2026)
+- **Deadline:** April 20, 2026
 - **Prize Pool:** $10,000
 
 ---
