@@ -141,7 +141,7 @@ app.post('/api/search', async (req, res) => {
     let improved = query;
     try {
       improved = await groq([
-        { role:'system', content:'Rewrite the user query into effective Quran search terms. Include Arabic roots/words. Return ONLY the search string, nothing else.' },
+        { role:'system', content:'You are an expert Quran search assistant. Rewrite the user query into the most effective search terms for a Quran search engine. Include relevant Arabic words, roots, and key phrases. Be PRECISE — do not broaden the query so much that unrelated verses appear. Stay focused on the exact topic. For example: honey healing should only include terms related to honey (عسل) and healing/cure (شفاء), not general guidance or leadership verses. Return ONLY the improved search string (no explanation).' },
         { role:'user', content:`Query: "${query}"` }
       ], { maxTokens:80, temperature:0.3 });
       if (!improved || improved.length < 3) improved = query;
