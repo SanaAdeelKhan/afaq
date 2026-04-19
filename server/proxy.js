@@ -124,7 +124,7 @@ async function groq(messages, { maxTokens=1000, temperature=0.7 }={}) {
   const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${KEY}`},
-    body: JSON.stringify({ model:'llama-3.3-70b-versatile', temperature, max_tokens:maxTokens, messages })
+    body: JSON.stringify({ model: maxTokens >= 2000 ? 'llama-3.3-70b-versatile' : 'llama3-70b-8192', temperature, max_tokens:maxTokens, messages })
   });
   const d = await r.json();
   if (d.error) throw new Error(d.error.message);
