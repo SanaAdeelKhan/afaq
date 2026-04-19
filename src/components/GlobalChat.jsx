@@ -26,7 +26,9 @@ When user asks about a specific event or topic, always:
 Format verse keys in brackets like [51:47] so the app can detect and make them clickable.
 
 Keep responses concise — 3-5 sentences max unless depth is needed.
-Always be respectful and grounded in authentic Islamic scholarship.`;
+Never repeat or correct a verse reference you already gave in this conversation. State it once and stop.
+Always be respectful and grounded in authentic Islamic scholarship.
+Only cite verse references you are highly confident about. If unsure of the exact verse number, say so rather than guessing.`;
 
 export default function GlobalChat() {
   const navigate = useNavigate();
@@ -85,7 +87,7 @@ export default function GlobalChat() {
     try {
       const history = newMsgs
         .filter(m => m.role === 'user' || m.role === 'assistant')
-        .map(m => ({ role: m.role, content: m.text }));
+        .map(m => ({ role: m.role, content: m.role === 'assistant' ? m.text.replace(/\[(\d+:\d+(?:-\d+)?)\]/g, '$1') : m.text }));
 
       const res = await fetch(`${PROXY}/api/chat`, {
         method:'POST',
